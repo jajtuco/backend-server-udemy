@@ -37,88 +37,155 @@ async function verify(token) {
 }
 verify().catch(console.error);
 
-app.post('/google', async (req, res) => {
-
+app.post('/google', async ( req, res ) => {
     var token = req.body.token;
-
-    var googleUser = await verify(token)
-        .catch(e => {
-            return res.status(403).json({
-                ok: false,
-                mensaje: 'Token no válido'
-            });
+    var googleUser = await verify( token )
+        .catch(() => {
+            return;
         });
-
-
-    Usuario.findOne({ email: googleUser.email }, (err, usuarioDB) => {
-
-        if (err) {
-
-            return res.status(500).json({
-                ok: false,
-                mensaje: 'Error al buscar usuario',
-                errors: err
-            });
-        }
-
-        if (usuarioDB) {
-
-            if (usuarioDB.google === false) {
-                return res.status(400).json({
+ 
+    if ( googleUser === undefined ) {
+        return res.status(403).json({
+            ok: false,
+            mensaje: 'Token no válido'
+        });
+    } else {
+        Usuario.findOne({ email: googleUser.email }, ( err, usuarioDB ) => {
+            if ( err ) {
+                return res.status(500).json({
                     ok: false,
-                    mensaje: 'Debe usar su autenticación normal',
+                    mensaje: 'Error al buscar usuarios',
                     errors: err
                 });
+            }
+            if ( usuarioDB ) {
+                if ( usuarioDB.google === false ) {
+                    return res.status(400).json({
+                        ok: false,
+                        mensaje: 'Debe usar su autenticación estándar',
+                    });
+                } else {
+                    var token = jwt.sign({ usuario: usuarioDB }, SEED, { expiresIn: 14400 }); 
+                    return res.status(200).json({
+                        ok: true,
+                        usuario: usuarioDB,
+                        token,
+                        id: usuarioDB.id
+                    });
+                }
             } else {
-
-                var token = jwt.sign({ usuario: usuarioDB }, SEED, { expiresIn: 14400 }); // 4hs
-
-                res.status(200).json({
-                    ok: true,
-                    usuario: usuarioDB,
-                    token: token,
-                    id: usuarioDB._id
+                // El usuario no existe, hay que crearlo
+                var usuario = new Usuario({
+                    nombre: googleUser.nombre,
+                    email: googleUser.email,
+                    img: googleUser.img,
+                    google: true,
+                    password: ':)'
+                });
+                usuario.save(( err, usuarioDB ) => {
+                    if ( err ) {
+                        return res.status(500).json({
+                            ok: false,
+                            mensaje: 'Error al guardar usuario',
+                            errors: err
+                        });
+                    }
+                    var token = jwt.sign({ usuario: usuarioDB }, SEED, { expiresIn: 14400 }); 
+                    return res.status(200).json({
+                        ok: true,
+                        usuario: usuarioDB,
+                        token,
+                        id: usuarioDB.id
+                    });
                 });
             }
+        });
+    }
+});
 
-        } else {
-            // El usuario no existe... hay que crearlo
-            var usuario = new Usuario();
 
-            usuario.nombre = googleUser.nombre;
-            usuario.email= googleUser.email;
-            usuario.img = googleUser.img;
-            usuario.google = true;
-            usuario.password = ':)';
+// app.post('/google', async (req, res) => {
 
-            usuario.save( (err, usuarioDB) => {
+//     var token = req.body.token;
 
-                var token = jwt.sign({ usuario: usuarioDB }, SEED, { expiresIn: 14400 }); // 4hs
+//     var googleUser = await verify(token)
+//         .catch(e => {
+//             return res.status(403).json({
+//                 ok: false,
+//                 mensaje: 'Token no válido'
+//             });
+//         });
 
-                res.status(200).json({
-                    ok: true,
-                    usuario: usuarioDB,
-                    token: token,
-                    id: usuarioDB._id
-                });
+
+//     Usuario.findOne({ email: googleUser.email }, (err, usuarioDB) => {
+
+//         if (err) {
+
+//             return res.status(500).json({
+//                 ok: false,
+//                 mensaje: 'Error al buscar usuario',
+//                 errors: err
+//             });
+//         }
+
+//         if (usuarioDB) {
+
+//             if (usuarioDB.google === false) {
+//                 return res.status(400).json({
+//                     ok: false,
+//                     mensaje: 'Debe usar su autenticación normal',
+//                     errors: err
+//                 });
+//             } else {
+
+//                 var token = jwt.sign({ usuario: usuarioDB }, SEED, { expiresIn: 14400 }); // 4hs
+
+//                 res.status(200).json({
+//                     ok: true,
+//                     usuario: usuarioDB,
+//                     token: token,
+//                     id: usuarioDB._id
+//                 });
+//             }
+
+//         } else {
+//             // El usuario no existe... hay que crearlo
+//             var usuario = new Usuario();
+
+//             usuario.nombre = googleUser.nombre;
+//             usuario.email= googleUser.email;
+//             usuario.img = googleUser.img;
+//             usuario.google = true;
+//             usuario.password = ':)';
+
+//             usuario.save( (err, usuarioDB) => {
+
+//                 var token = jwt.sign({ usuario: usuarioDB }, SEED, { expiresIn: 14400 }); // 4hs
+
+//                 res.status(200).json({
+//                     ok: true,
+//                     usuario: usuarioDB,
+//                     token: token,
+//                     id: usuarioDB._id
+//                 });
             
 
 
-            });
-        }
+//             });
+//         }
 
 
-    });
+//     });
 
 
 
 
-    return res.status(520).json({
-        ok: false,
-        mensaje: 'google',
-        googleUser: googleUser
-    });
-});
+//     return res.status(520).json({
+//         ok: false,
+//         mensaje: 'google',
+//         googleUser: googleUser
+//     });
+// });
 
 // ===================================
 // Autenticacion normal
