@@ -50,7 +50,7 @@ app.get('/', (req, res, next) => {
 // ===================================
 // Actualizar usuarios
 // ===================================
-app.put('/:id', mdAutenticacion.verificaToken, (req, res) => {
+app.put('/:id', [mdAutenticacion.verificaToken, mdAutenticacion.verificaADMIN_o_MismoUsuario], (req, res) => {
 
     var id = req.params.id;
     var body = req.body;
@@ -83,7 +83,7 @@ app.put('/:id', mdAutenticacion.verificaToken, (req, res) => {
             if (err) {
                 return res.status(400).json({
                     ok: false,
-                    mensaje: 'Error al buscar usuario',
+                    mensaje: 'Error al actualizar usuario',
                     errors: err
                 });
             }
@@ -146,7 +146,7 @@ app.post('/', (req, res) => {
 // ===================================
 // Borrar un usuario por el ID
 // ===================================
-app.delete('/:id', mdAutenticacion.verificaToken, (req, res)=>{
+app.delete('/:id', [mdAutenticacion.verificaToken, mdAutenticacion.verificaADMIN_ROLE], (req, res)=>{
 
     var id = req.params.id;
 
